@@ -8,6 +8,10 @@
 #include <imgui.h>
 #include <Vector2.h>
 
+//平面がうまく出ない
+//当たり判定
+//ImGui系とカメラ
+
 //球
 struct Sphere {
 	Vector3 center;//中心点
@@ -385,27 +389,6 @@ void DrawSphere(const Sphere& sphere, const Matrix4x4& viewProjectionMatrix, con
 	}
 }
 
-//平面をの描画
-void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewMatrix, uint32_t color) {
-	Vector3 center = Multiply(plane.distance, plane.normal);//1.中心点を決める
-	Vector3 perpendiculars[4];
-	perpendiculars[0] = Normalize(Perpendicular(plane.normal));//2.法線と垂直なベクトルを一つ決める
-	perpendiculars[1] = { -perpendiculars[0].x,-perpendiculars[0].y,-perpendiculars[0].z };//3.２の逆ベクトルを求める
-	perpendiculars[2] = Cross(plane.normal, perpendiculars[0]);//4.２と法線とのクロス積を求める
-	perpendiculars[3] = { -perpendiculars[2].x,-perpendiculars[2].y,-perpendiculars[2].z };//5.４の逆ベクトルを求める
-	//6.２～５のベクトルを中心点にそれぞれ定数倍して足すと４頂点が出来上がる
-	Vector3 points[4];
-	for (int32_t index = 0; index < 4; ++index) {
-		Vector3 extend = Multiply(2.0f, perpendiculars[index]);
-		Vector3 point = Add(center, extend);
-		points[index] = Transform(Transform(point, viewProjectionMatrix), viewMatrix);
-	}
-	Novice::DrawLine(int(points[0].x), int(points[0].y), int(points[1].x), int(points[1].y),color);
-	Novice::DrawLine(int(points[1].x), int(points[1].y), int(points[2].x), int(points[2].y),color);
-	Novice::DrawLine(int(points[2].x), int(points[2].y), int(points[3].x), int(points[3].y),color);
-	Novice::DrawLine(int(points[3].x), int(points[3].y), int(points[0].x), int(points[0].y),color);
-}
-
 //正射影ベクトル（ベクトル射影）
 Vector3 Project(const Vector3& v1, const Vector3& v2) {
 	//v1とv2の内積
@@ -464,7 +447,7 @@ bool IsCollision(const Sphere& s1, const Sphere& s2) {
 }
 
 //球と平面の当たり判定
-bool ISCollision(const Sphere& sphere, const Plane& plane);
+//bool ISCollision(const Sphere& sphere, const Plane& plane);
 
 //垂線
 Vector3 Perpendicular(const Vector3& vector) {
@@ -474,6 +457,27 @@ Vector3 Perpendicular(const Vector3& vector) {
 	return { 0.0f,-vector.z,vector.y };
 }
 
+//平面をの描画
+void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewMatrix, uint32_t color) {
+	Vector3 center = Multiply(plane.distance, plane.normal);//1.中心点を決める
+	Vector3 perpendiculars[4];
+	perpendiculars[0] = Normalize(Perpendicular(plane.normal));//2.法線と垂直なベクトルを一つ決める
+	perpendiculars[1] = { -perpendiculars[0].x,-perpendiculars[0].y,-perpendiculars[0].z };//3.２の逆ベクトルを求める
+	perpendiculars[2] = Cross(plane.normal, perpendiculars[0]);//4.２と法線とのクロス積を求める
+	perpendiculars[3] = { -perpendiculars[2].x,-perpendiculars[2].y,-perpendiculars[2].z };//5.４の逆ベクトルを求める
+	//6.２～５のベクトルを中心点にそれぞれ定数倍して足すと４頂点が出来上がる
+	Vector3 points[4];
+	for (int32_t index = 0; index < 4; ++index) {
+		Vector3 extend = Multiply(2.0f, perpendiculars[index]);
+		Vector3 point = Add(center, extend);
+		points[index] = Transform(Transform(point, viewProjectionMatrix), viewMatrix);
+	}
+	Novice::DrawLine(int(points[0].x), int(points[0].y), int(points[1].x), int(points[1].y), color);
+	Novice::DrawLine(int(points[1].x), int(points[1].y), int(points[2].x), int(points[2].y), color);
+	Novice::DrawLine(int(points[2].x), int(points[2].y), int(points[3].x), int(points[3].y), color);
+	Novice::DrawLine(int(points[3].x), int(points[3].y), int(points[0].x), int(points[0].y), color);
+}
+
 const char kWindowTitle[] = "LE2B_04_オザワ_ユウト";
 
 // Windowsアプリでのエントリーポイント(main関数)
@@ -481,6 +485,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 
 	// ライブラリの初期化
 	Novice::Initialize(kWindowTitle, 1280, 720);
+
+	Sphere sphere = {
+		{0.f,0.f,0.f},
+		1.f
+	};
+
+	Plane plane = {
+		{0.f,0.f,1.f},
+		5.f
+	};
 
 	Vector3 rotate = {};
 	Vector3 translate = {};
@@ -520,6 +534,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//ViewportMatrixを作る
 		Matrix4x4 viewPortMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 
+
 		///
 		/// ↑更新処理ここまで
 		///
@@ -528,8 +543,16 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 
+		DrawGrid(worldViewProjectionMatrix, viewPortMatrix);
+		DrawSphere(sphere,worldViewProjectionMatrix,viewPortMatrix,WHITE);
+		DrawPlane(plane, worldViewProjectionMatrix, viewPortMatrix, WHITE);
 
+		ImGui::Begin("Window");
+		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
+		ImGui::DragFloat3("CameraRotate", &cameraRotate.x, 0.01f);
+		ImGui::End();
 
+	
 		///
 		/// ↑描画処理ここまで
 		///
