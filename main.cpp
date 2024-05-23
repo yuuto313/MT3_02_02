@@ -7,10 +7,7 @@
 #include <math.h>
 #include <imgui.h>
 #include <Vector2.h>
-
-//平面がうまく出ない
-//当たり判定
-//ImGui系とカメラ
+#include <cmath>
 
 //球
 struct Sphere {
@@ -292,7 +289,7 @@ void VectorScreenPrintf(int x, int y, const Vector3& vector, const char* label) 
 void DrawGrid(const Matrix4x4& viewProjectionMatrix, const Matrix4x4& viewportMatrix) {
 
 	const float kGridHalfWidth = 2.0f;//Gridの半分の幅
-	const uint32_t kSubdivision = 10;//分割数
+	const uint32_t kSubdivision = 16;//分割数
 	const float kGridEvery = (kGridHalfWidth * 2.0f) / float(kSubdivision);//一つ分の長さ
 	//奥から手前への線を徐々に引いていく
 	for (uint32_t xIndex = 0; xIndex <= kSubdivision; ++xIndex) {
@@ -435,7 +432,7 @@ Vector3 ClosestPoint(const Vector3& point, const Segment& segment) {
 }
 
 //球と球の当たり判定
-bool IsCollision(const Sphere& s1, const Sphere& s2) {
+bool IsCollisionSphere(const Sphere& s1, const Sphere& s2) {
 	//2つの球の中心点関の距離を求める
 	float distance = Length(s2.center - s1.center);
 	//半径の合計よりも短ければ衝突
@@ -445,9 +442,6 @@ bool IsCollision(const Sphere& s1, const Sphere& s2) {
 		return false;
 	}
 }
-
-//球と平面の当たり判定
-//bool ISCollision(const Sphere& sphere, const Plane& plane);
 
 //垂線
 Vector3 Perpendicular(const Vector3& vector) {
@@ -472,12 +466,22 @@ void DrawPlane(const Plane& plane, const Matrix4x4& viewProjectionMatrix, const 
 		Vector3 point = Add(center, extend);
 		points[index] = Transform(Transform(point, viewProjectionMatrix), viewMatrix);
 	}
-	Novice::DrawLine(int(points[0].x), int(points[0].y), int(points[1].x), int(points[1].y), color);
+	Novice::DrawLine(int(points[0].x), int(points[0].y), int(points[3].x), int(points[3].y), color);
+	Novice::DrawLine(int(points[3].x), int(points[3].y), int(points[1].x), int(points[1].y), color);
 	Novice::DrawLine(int(points[1].x), int(points[1].y), int(points[2].x), int(points[2].y), color);
-	Novice::DrawLine(int(points[2].x), int(points[2].y), int(points[3].x), int(points[3].y), color);
-	Novice::DrawLine(int(points[3].x), int(points[3].y), int(points[0].x), int(points[0].y), color);
+	Novice::DrawLine(int(points[2].x), int(points[2].y), int(points[0].x), int(points[0].y), color);
 }
 
+//球と平面の当たり判定
+bool IsCollisionPlane(const Sphere& sphere, const Plane& plane) {
+	
+	float distance = std::abs(Dot(plane.normal, sphere.center) - plane.distance);
+	if (distance <= sphere.radius) {
+		return true;
+	} else {
+		return false;
+	}
+}
 const char kWindowTitle[] = "LE2B_04_オザワ_ユウト";
 
 // Windowsアプリでのエントリーポイント(main関数)
@@ -487,7 +491,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Novice::Initialize(kWindowTitle, 1280, 720);
 
 	Sphere sphere = {
-		{0.f,0.f,0.f},
+		{0.f,0.f,1.f},
 		1.f
 	};
 
@@ -499,6 +503,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	Vector3 rotate = {};
 	Vector3 translate = {};
 
+	int color;
 
 	int kWindowWidth = 1280;
 	int kWindowHeight = 720;
@@ -534,7 +539,23 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//ViewportMatrixを作る
 		Matrix4x4 viewPortMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 
+		//当たり判定
+		if (IsCollisionPlane(sphere, plane)) {
+			color = RED;
+		} else {
+			color = WHITE;
+		}
 
+		ImGui::Begin("Window");
+		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
+		ImGui::DragFloat3("CameraRotate", &cameraRotate.x, 0.01f);
+		ImGui::DragFloat3("Sphere.Center", &sphere.center.x, 0.01f);
+		ImGui::DragFloat("Sphere.Radius", &sphere.radius, 0.01f);
+		ImGui::DragFloat3("Plane.Normal", &plane.normal.x, 0.01f);
+		ImGui::DragFloat("Plane.Distace", &plane.distance, 0.01f);
+		ImGui::End();
+		plane.normal = Normalize(plane.normal);
+	
 		///
 		/// ↑更新処理ここまで
 		///
@@ -544,14 +565,8 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		///
 
 		DrawGrid(worldViewProjectionMatrix, viewPortMatrix);
-		DrawSphere(sphere,worldViewProjectionMatrix,viewPortMatrix,WHITE);
+		DrawSphere(sphere,worldViewProjectionMatrix,viewPortMatrix,color);
 		DrawPlane(plane, worldViewProjectionMatrix, viewPortMatrix, WHITE);
-
-		ImGui::Begin("Window");
-		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
-		ImGui::DragFloat3("CameraRotate", &cameraRotate.x, 0.01f);
-		ImGui::End();
-
 	
 		///
 		/// ↑描画処理ここまで
