@@ -490,16 +490,6 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 	// ライブラリの初期化
 	Novice::Initialize(kWindowTitle, 1280, 720);
 
-	Sphere sphere = {
-		{0.f,0.f,1.f},
-		1.f
-	};
-
-	Plane plane = {
-		{0.f,0.f,1.f},
-		5.f
-	};
-
 	Vector3 rotate = {};
 	Vector3 translate = {};
 
@@ -539,22 +529,10 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		//ViewportMatrixを作る
 		Matrix4x4 viewPortMatrix = MakeViewportMatrix(0, 0, float(kWindowWidth), float(kWindowHeight), 0.0f, 1.0f);
 
-		//当たり判定
-		if (IsCollisionPlane(sphere, plane)) {
-			color = RED;
-		} else {
-			color = WHITE;
-		}
 
-		ImGui::Begin("Window");
-		ImGui::DragFloat3("CameraTranslate", &cameraTranslate.x, 0.01f);
-		ImGui::DragFloat3("CameraRotate", &cameraRotate.x, 0.01f);
-		ImGui::DragFloat3("Sphere.Center", &sphere.center.x, 0.01f);
-		ImGui::DragFloat("Sphere.Radius", &sphere.radius, 0.01f);
-		ImGui::DragFloat3("Plane.Normal", &plane.normal.x, 0.01f);
-		ImGui::DragFloat("Plane.Distace", &plane.distance, 0.01f);
-		ImGui::End();
-		plane.normal = Normalize(plane.normal);
+		/*ImGui::Begin("Window");
+		ImGui::End();*/
+		
 	
 		///
 		/// ↑更新処理ここまで
@@ -564,9 +542,7 @@ int WINAPI WinMain(HINSTANCE, HINSTANCE, LPSTR, int) {
 		/// ↓描画処理ここから
 		///
 
-		DrawGrid(worldViewProjectionMatrix, viewPortMatrix);
-		DrawSphere(sphere,worldViewProjectionMatrix,viewPortMatrix,color);
-		DrawPlane(plane, worldViewProjectionMatrix, viewPortMatrix, WHITE);
+		
 	
 		///
 		/// ↑描画処理ここまで
